@@ -12,7 +12,18 @@ Replaces the old HoRNDIS kext.
 - macOS 15+ (Apple Silicon or Intel)
 - Xcode Command Line Tools installed
 
-## Quick Start
+## Download
+
+You can check out the [latest release](https://github.com/JellyBrick/ReRNDIS/releases/latest) to quickly find the
+latest version.
+
+If you install the app manually and get an error "is damaged and can’t be opened." when launching the app, run the following in the Terminal:
+
+```bash
+/usr/bin/xattr -cr /Applications/ReRNDIS.app
+```
+
+## Quick Start (build)
 
 Build and install the daemon:
 
