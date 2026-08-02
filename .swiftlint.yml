@@ -1,0 +1,53 @@
+included:
+  - Sources
+  - Tests
+
+excluded:
+  # Throwaway milestone spikes; verified by execution, not style.
+  - Sources/SpikeUSB
+  - Sources/SpikeFeth
+
+disabled_rules:
+  # HACK/TODO markers are governed by convention (short, with a reason), not banned.
+  - todo
+  # String(decoding:as:) on process output and C-string buffers is deliberate:
+  # lossy-but-total decoding beats a failable path nobody can act on.
+  - optional_data_string_conversion
+
+opt_in_rules:
+  - empty_count
+  - contains_over_first_not_nil
+  - closure_spacing
+  - redundant_nil_coalescing
+
+identifier_name:
+  allowed_symbols: ["_"]
+  min_length:
+    warning: 1 # loop indices; see excluded for the localization helper
+  max_length:
+    warning: 50
+  excluded:
+    - "^[A-Z][A-Z0-9_]*$" # RNDIS wire constants keep their spec names
+    - "^L$" # localization helper
+
+line_length:
+  warning: 140
+  error: 200
+  ignores_comments: true
+
+function_body_length:
+  warning: 90
+  error: 140
+
+type_body_length:
+  warning: 400
+
+file_length:
+  warning: 700
+  error: 1000
+
+cyclomatic_complexity:
+  warning: 15
+
+nesting:
+  type_level: 2

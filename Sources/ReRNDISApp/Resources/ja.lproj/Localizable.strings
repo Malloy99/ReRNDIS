@@ -1,0 +1,40 @@
+"daemon.unreachable" = "ドライバーデーモンに接続できません";
+"daemon.unreachable.hint" = "未インストールの場合はリポジトリで make install を実行してください";
+"toggle.enabled" = "USBテザリングを使用";
+"control.adminRequired" = "変更には管理者アカウントが必要です";
+"control.failed" = "リクエストを処理できませんでした";
+"devices.section.title" = "デバイス";
+"devices.empty" = "接続中のRNDISデバイスはありません";
+"devices.empty.hint" = "デバイスを接続してUSBテザリングをオンにしてください";
+"status.loading" = "状態を読み込んでいます";
+"menu.quit" = "終了";
+"phase.up.connected" = "インターフェイス: %@";
+"phase.up.waitingLink" = "%@ は準備完了、デバイスのリンクを待っています";
+"phase.initializing" = "接続しています";
+"phase.failed" = "接続できませんでした。ケーブルを挿し直してください";
+"interface.placeholder" = "仮想インターフェイス";
+"rates.format" = "受信 %@ · 送信 %@";
+
+"settings.txMode" = "アップロード方式";
+"txmode.ordered" = "順序優先";
+"txmode.balanced" = "バランス";
+"txmode.pipelined" = "高速（順序保証）";
+"txmode.throughput" = "速度優先";
+"settings.rxReaders" = "ダウンロード同時受信";
+"settings.rxReaders.value" = "%d本";
+"settings.restartNote" = "設定を変更すると接続が一時的に再開されます";
+"bench.tx.format" = "USBアップロード上限 %@";
+"bench.rtt.format" = "応答時間 %.1fms（p95 %.1fms）";
+"bench.failed.format" = "ベンチマークに失敗しました: %@";
+"bench.noDevice" = "接続中のデバイスがありません";
+"bench.note" = "テザリング機器とどれだけ速くつながっているか確認できます。";
+
+"settings.autoStart" = "再起動後に自動で開始";
+"settings.notifyConnect" = "デバイス接続時に通知";
+"notify.connected.title" = "USBテザリングが接続されました";
+
+"device.preferred.help" = "このデバイスを優先接続に設定";
+
+"installer.install" = "ドライバをインストール";
+"installer.uninstall" = "ドライバを削除";
+"installer.failed.format" = "失敗しました: %@";

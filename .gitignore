@@ -18,6 +18,7 @@ xcuserdata
 DerivedData
 *.xcuserstate
 
+.idea
 
 ### OSX ###
 .DS_Store
@@ -66,3 +67,11 @@ Temporary Items
 *.la
 *.a
 *.lib
+
+
+### SwiftPM ###
+.build/
+.swiftpm/
+/dist/
+*.bin
+*.bc

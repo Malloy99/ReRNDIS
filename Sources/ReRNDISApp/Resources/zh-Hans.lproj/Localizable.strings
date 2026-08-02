@@ -1,0 +1,40 @@
+"daemon.unreachable" = "无法连接驱动守护进程";
+"daemon.unreachable.hint" = "如果尚未安装，请在仓库中运行 make install";
+"toggle.enabled" = "使用 USB 网络共享";
+"control.adminRequired" = "只有管理员账户才能更改";
+"control.failed" = "无法完成请求";
+"devices.section.title" = "设备列表";
+"devices.empty" = "没有已连接的 RNDIS 设备";
+"devices.empty.hint" = "请连接设备并开启 USB 网络共享";
+"status.loading" = "正在加载状态";
+"menu.quit" = "退出";
+"phase.up.connected" = "接口：%@";
+"phase.up.waitingLink" = "%@ 已就绪，正在等待设备链路";
+"phase.initializing" = "正在连接";
+"phase.failed" = "连接失败，请重新插拔数据线";
+"interface.placeholder" = "虚拟接口";
+"rates.format" = "下载 %@ · 上传 %@";
+
+"settings.txMode" = "上传模式";
+"txmode.ordered" = "顺序优先";
+"txmode.balanced" = "均衡";
+"txmode.pipelined" = "高速（保序）";
+"txmode.throughput" = "速度优先";
+"settings.rxReaders" = "下载通道";
+"settings.rxReaders.value" = "%d 个";
+"settings.restartNote" = "更改设置会短暂重启连接";
+"bench.tx.format" = "USB 上传上限 %@";
+"bench.rtt.format" = "响应时间 %.1fms（p95 %.1fms）";
+"bench.failed.format" = "基准测试失败：%@";
+"bench.noDevice" = "没有已连接的设备";
+"bench.note" = "可以查看与网络共享设备的连接速度。";
+
+"settings.autoStart" = "重启后自动启动";
+"settings.notifyConnect" = "设备连接时通知";
+"notify.connected.title" = "USB 网络共享已连接";
+
+"device.preferred.help" = "设为主要连接";
+
+"installer.install" = "安装驱动";
+"installer.uninstall" = "移除驱动";
+"installer.failed.format" = "失败：%@";

@@ -1,0 +1,40 @@
+"daemon.unreachable" = "드라이버 데몬에 연결하지 못했어요";
+"daemon.unreachable.hint" = "설치가 아직이라면 저장소에서 make install을 실행해 주세요";
+"toggle.enabled" = "USB 테더링 사용";
+"control.adminRequired" = "관리자 계정에서만 바꿀 수 있어요";
+"control.failed" = "요청을 처리하지 못했어요";
+"devices.section.title" = "디바이스 목록";
+"devices.empty" = "연결된 RNDIS 기기가 없어요";
+"devices.empty.hint" = "기기를 연결하고 USB 테더링을 켜주세요.";
+"status.loading" = "상태를 불러오고 있어요";
+"menu.quit" = "종료";
+"phase.up.connected" = "인터페이스: %@";
+"phase.up.waitingLink" = "%@ 준비 완료, 기기 링크를 기다리고 있어요";
+"phase.initializing" = "연결하고 있어요";
+"phase.failed" = "연결하지 못했어요. 케이블을 다시 꽂아 주세요";
+"interface.placeholder" = "가상 인터페이스";
+"rates.format" = "내려받기 %@ · 올리기 %@";
+
+"settings.txMode" = "업로드 방식";
+"txmode.ordered" = "순서 우선";
+"txmode.balanced" = "균형";
+"txmode.pipelined" = "고속 (순서 보장)";
+"txmode.throughput" = "속도 우선";
+"settings.rxReaders" = "다운로드 채널 수";
+"settings.rxReaders.value" = "%d개";
+"settings.restartNote" = "설정을 바꾸면 연결이 잠깐 끊어져요.";
+"bench.tx.format" = "USB 업로드 한계 %@";
+"bench.rtt.format" = "응답 시간 %.1fms (p95 %.1fms)";
+"bench.failed.format" = "벤치마크에 실패했어요: %@";
+"bench.noDevice" = "연결된 기기가 없어요";
+"bench.note" = "테더링 기기와 얼마나 빠르게 연결되어 있는지 확인할 수 있어요.";
+
+"settings.autoStart" = "재부팅 후 자동 시작";
+"settings.notifyConnect" = "새 기기 연결 알림";
+"notify.connected.title" = "USB 테더링이 연결됐어요";
+
+"device.preferred.help" = "이 기기를 기본 연결로 설정";
+
+"installer.install" = "드라이버 설치";
+"installer.uninstall" = "드라이버 제거";
+"installer.failed.format" = "실패했어요: %@";

@@ -1,0 +1,43 @@
+/* Menu bar app strings. Keys are shared across every language; copy this file
+   to <code>.lproj/Localizable.strings and translate the values to add one. */
+
+"daemon.unreachable" = "Can't reach the driver daemon";
+"daemon.unreachable.hint" = "If it isn't installed yet, run make install from the repository";
+"toggle.enabled" = "USB tethering";
+"control.adminRequired" = "Only administrator accounts can change this";
+"control.failed" = "The request could not be completed";
+"devices.section.title" = "Devices";
+"devices.empty" = "No RNDIS devices connected";
+"devices.empty.hint" = "Connect a device and turn on USB tethering";
+"status.loading" = "Loading status";
+"menu.quit" = "Quit";
+"phase.up.connected" = "Interface: %@";
+"phase.up.waitingLink" = "%@ is ready, waiting for the device link";
+"phase.initializing" = "Connecting";
+"phase.failed" = "Connection failed. Reconnect the cable";
+"interface.placeholder" = "virtual interface";
+"rates.format" = "Down %@ · Up %@";
+
+"settings.txMode" = "Upload mode";
+"txmode.ordered" = "Strict order";
+"txmode.balanced" = "Balanced";
+"txmode.pipelined" = "Fast (ordered)";
+"txmode.throughput" = "Max speed";
+"settings.rxReaders" = "Download channels";
+"settings.rxReaders.value" = "%d";
+"settings.restartNote" = "Changing a setting briefly restarts the connection";
+"bench.tx.format" = "USB upload limit %@";
+"bench.rtt.format" = "Response time %.1f ms (p95 %.1f ms)";
+"bench.failed.format" = "Benchmark failed: %@";
+"bench.noDevice" = "no device is connected";
+"bench.note" = "See how fast the connection to your tethering device is.";
+
+"settings.autoStart" = "Start automatically after reboot";
+"settings.notifyConnect" = "Notify when a device connects";
+"notify.connected.title" = "USB tethering connected";
+
+"device.preferred.help" = "Set as the primary connection";
+
+"installer.install" = "Install the driver";
+"installer.uninstall" = "Remove the driver";
+"installer.failed.format" = "Failed: %@";
