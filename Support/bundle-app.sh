@@ -26,14 +26,14 @@ cp "$REPO/Support/App-Info.plist" "$APP/Contents/Info.plist"
 cp "$REPO/Support/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 cp "$BIN" "$APP/Contents/MacOS/ReRNDIS"
 
-# Localized strings live in the SwiftPM resource bundle; Bundle.module finds it
-# under Contents/Resources at runtime.
+# Localized strings live in the SwiftPM resource bundle, resolved at runtime
+# from Contents/Resources. Shipping without it would strip every UI string.
 RES_BUNDLE="$(dirname "$BIN")/ReRNDIS_ReRNDISApp.bundle"
-if [ -d "$RES_BUNDLE" ]; then
-  cp -R "$RES_BUNDLE" "$APP/Contents/Resources/"
-else
-  echo "warning: resource bundle missing at $RES_BUNDLE (localization will fall back to keys)" >&2
+if [ ! -d "$RES_BUNDLE" ]; then
+  echo "resource bundle missing at $RES_BUNDLE" >&2
+  exit 1
 fi
+cp -R "$RES_BUNDLE" "$APP/Contents/Resources/"
 
 # Payload the app installs with an authorization prompt. Prefer universal
 # binaries from dist/ when a `make dist` produced them.

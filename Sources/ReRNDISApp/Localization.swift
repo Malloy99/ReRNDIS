@@ -43,8 +43,21 @@ enum LocalizedKey: String, CaseIterable {
     case installerFailedFormat = "installer.failed.format"
 }
 
+// Bundle.module cannot ship inside an .app: its only fallback is an absolute
+// path on the build machine, so it traps everywhere else. Resolve the SwiftPM
+// resource bundle against both real layouts and degrade to raw keys instead.
+private let localizationBundle: Bundle = {
+    let name = "ReRNDIS_ReRNDISApp.bundle"
+    for base in [Bundle.main.resourceURL, Bundle.main.bundleURL] {
+        if let bundle = base.flatMap({ Bundle(url: $0.appendingPathComponent(name)) }) {
+            return bundle
+        }
+    }
+    return .main
+}()
+
 func L(_ key: LocalizedKey) -> String {
-    String(localized: String.LocalizationValue(key.rawValue), bundle: .module)
+    String(localized: String.LocalizationValue(key.rawValue), bundle: localizationBundle)
 }
 
 func L(_ key: LocalizedKey, _ arguments: CVarArg...) -> String {

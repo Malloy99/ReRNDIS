@@ -12,7 +12,7 @@ jobs:
   dist:
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Select the newest Xcode 26
         run: |
@@ -44,17 +44,13 @@ jobs:
       - name: Name the artifacts
         run: |
           NAME="ReRNDIS-${GITHUB_REF_NAME//\//-}"
-          mv dist/ReRNDIS-dist.zip "dist/$NAME.zip"
           mv dist/ReRNDIS-dist.dmg "dist/$NAME.dmg"
-          echo "ZIP=dist/$NAME.zip" >> "$GITHUB_ENV"
           echo "DMG=dist/$NAME.dmg" >> "$GITHUB_ENV"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ReRNDIS-universal
-          path: |
-            ${{ env.ZIP }}
-            ${{ env.DMG }}
+          path: ${{ env.DMG }}
 
       - name: Create the GitHub release
         if: startsWith(github.ref, 'refs/tags/')
