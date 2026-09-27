@@ -93,5 +93,42 @@ private func le32(_ values: [UInt32]) -> [UInt8] {
         #expect(throws: RNDISParseError.tooShort) {
             _ = try RNDISControlMessage.parse([0x02, 0x00, 0x00])
         }
+        #expect(throws: RNDISParseError.tooShort) {
+            _ = try RNDISControlMessage.parse([0x08, 0x00, 0x00, 0x00, 0x0C, 0x00])
+        }
+    }
+
+    @Test func rejectsClaimedLengthShorterThanHeader() {
+        #expect(throws: RNDISParseError.lengthMismatch(claimed: 8, available: 12)) {
+            _ = try RNDISControlMessage.parse(le32([8, 8, 77]))
+        }
+    }
+
+    @Test func readsStopAtClaimedLength() {
+        #expect(throws: RNDISParseError.tooShort) {
+            _ = try RNDISControlMessage.parse(le32([0x8000_0005, 12, 5, 0]))
+        }
+    }
+
+    @Test func truncatedInitializeCompleteThrows() {
+        let bytes = le32([0x8000_0002, 40, 1, 0, 1, 0, 1, 0, 1, 16384])
+        #expect(throws: RNDISParseError.tooShort) {
+            _ = try RNDISControlMessage.parse(bytes)
+        }
+    }
+
+    @Test func queryInfoWindowMustStartAfterHeader() throws {
+        #expect(throws: RNDISParseError.malformedOffsets) {
+            _ = try RNDISControlMessage.parse(le32([0x8000_0004, 32, 2, 0, 4, 8, 0, 0]))
+        }
+        let empty = try RNDISControlMessage.parse(le32([0x8000_0004, 24, 2, 0, 0, 0]))
+        #expect(empty == .queryComplete(requestID: 2, status: 0, info: []))
+    }
+
+    @Test func parsesKeepaliveCompleteAndUnknownTypes() throws {
+        let complete = try RNDISControlMessage.parse(le32([0x8000_0008, 16, 5, 0]))
+        #expect(complete == .keepaliveComplete(requestID: 5, status: 0))
+        let unknown = try RNDISControlMessage.parse(le32([0x99, 12, 0]))
+        #expect(unknown == .unknown(type: 0x99))
     }
 }

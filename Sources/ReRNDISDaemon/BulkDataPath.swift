@@ -13,7 +13,6 @@
 // interface, so a single flow parallelizes without reordering. The other
 // modes keep the synchronous paths.
 
-import DequeModule
 import Foundation
 @preconcurrency import IOUSBHost
 import ReRNDISShared
@@ -75,11 +74,11 @@ final class BulkDataPath: @unchecked Sendable {
 
     private let rxCondition = NSCondition()
     private var rxFree: [NSMutableData] = []
-    private var rxFilled = Deque<(buffer: NSMutableData, length: Int)>()
+    private let rxFilled: BoundedQueue<(buffer: NSMutableData, length: Int)>
 
     private let txCondition = NSCondition()
-    private var txUrgent = Deque<[UInt8]>()
-    private var txLanes: [Deque<[UInt8]>]
+    private let txUrgent = BoundedQueue<[UInt8]>(capacity: BulkDataPath.urgentFrameLimit)
+    private let txLanes: [BoundedQueue<[UInt8]>]
 
     private let state = Mutex(PumpState())
     private let rxBytes = Atomic<UInt64>(0)
@@ -117,12 +116,15 @@ final class BulkDataPath: @unchecked Sendable {
         let readers = Int(environment["RERNDIS_RX_READERS"] ?? "") ?? configuration.rxReaders
         self.txWriterCount = min(max(writers, 1), 4)
         self.rxReaderCount = min(max(readers, 1), 8)
+        self.rxFilled = BoundedQueue(capacity: rxReaderCount + 2)
         let asyncPlane = environment["RERNDIS_ASYNC_PLANE"].map { $0 == "1" } ?? configuration.usesAsyncPlane
         self.usesAsyncPlane = asyncPlane
         self.rxSlots = DispatchSemaphore(value: min(max(readers, 1), 8))
         let steering = environment["RERNDIS_TX_STEERING"].map { $0 != "0" } ?? configuration.txFlowSteering
         self.txSteersFlows = steering && txWriterCount > 1 && !asyncPlane
-        self.txLanes = Array(repeating: Deque(), count: txSteersFlows ? txWriterCount : 1)
+        self.txLanes = (0..<(txSteersFlows ? txWriterCount : 1)).map { _ in
+            BoundedQueue(capacity: BulkDataPath.bulkFrameLimit)
+        }
         self.txUsesAsyncSubmitter = asyncPlane
             || (configuration.txMode == .throughput
                 && environment["RERNDIS_TX_ASYNC"] == "1"
@@ -135,14 +137,14 @@ final class BulkDataPath: @unchecked Sendable {
         }
 
         rxCondition.lock()
-        rxFree = (0..<(rxReaderCount + 2)).compactMap { _ in makeInboundBuffer() }
+        rxFree = (0..<rxFilled.capacity).compactMap { _ in makeInboundBuffer() }
         rxFilled.removeAll()
         rxCondition.unlock()
 
         txCondition.lock()
         txUrgent.removeAll()
-        for index in txLanes.indices {
-            txLanes[index].removeAll()
+        for lane in txLanes {
+            lane.removeAll()
         }
         txCondition.unlock()
 
@@ -304,14 +306,11 @@ extension BulkDataPath {
                 continue
             }
 
-            rxCondition.lock()
             if transferred > 0 {
-                rxFilled.append((buffer, Int(transferred)))
+                deliver(buffer, length: Int(transferred))
             } else {
-                rxFree.append(buffer)
+                recycle(buffer)
             }
-            rxCondition.broadcast()
-            rxCondition.unlock()
         }
     }
 
@@ -356,10 +355,7 @@ extension BulkDataPath {
                         $0.txBytesAtLastRX = sent
                     }
                     if status == 0, transferred > 0 {
-                        self.rxCondition.lock()
-                        self.rxFilled.append((buffer, transferred))
-                        self.rxCondition.broadcast()
-                        self.rxCondition.unlock()
+                        self.deliver(buffer, length: transferred)
                     } else {
                         if status == kUSBHostReturnPipeStalledValue {
                             self.state.withLock { $0.rxNeedsStallClear = true }
@@ -388,6 +384,15 @@ extension BulkDataPath {
     private func recycle(_ buffer: NSMutableData) {
         rxCondition.lock()
         rxFree.append(buffer)
+        rxCondition.broadcast()
+        rxCondition.unlock()
+    }
+
+    private func deliver(_ buffer: NSMutableData, length: Int) {
+        rxCondition.lock()
+        if !rxFilled.append((buffer, length)) {
+            rxFree.append(buffer)
+        }
         rxCondition.broadcast()
         rxCondition.unlock()
     }
@@ -431,19 +436,8 @@ extension BulkDataPath {
         let lane = txSteersFlows && !urgent ? FrameClassifier.flowLane(frame, laneCount: txLanes.count) : 0
         let copy = [UInt8](frame)
 
-        var dropped = false
         txCondition.lock()
-        if urgent {
-            if txUrgent.count < Self.urgentFrameLimit {
-                txUrgent.append(copy)
-            } else {
-                dropped = true
-            }
-        } else if txLanes[lane].count < Self.bulkFrameLimit {
-            txLanes[lane].append(copy)
-        } else {
-            dropped = true
-        }
+        let queued = urgent ? txUrgent.append(copy) : txLanes[lane].append(copy)
         // Steered writers wait for their own lane, so a signal() could wake
         // the wrong one and strand the frame.
         if txSteersFlows {
@@ -453,7 +447,7 @@ extension BulkDataPath {
         }
         txCondition.unlock()
 
-        guard dropped else { return }
+        guard !queued else { return }
         let total = state.withLock { pump -> Int in
             pump.dropCount += 1
             return pump.dropCount
@@ -474,18 +468,19 @@ extension BulkDataPath {
         var batch: [[UInt8]] = []
         var projected = 0
         let alignment = 1 << min(max(outAlignmentFactor, 0), 10)
-        while batch.count < outMaxPacketsPerTransfer {
-            guard let next = txUrgent.first ?? txLanes[lane].first else { break }
-            let padding = batch.isEmpty ? 0 : (alignment - projected % alignment) % alignment
-            let needed = padding + RNDISFraming.PACKET_HEADER_SIZE + next.count
-            if !batch.isEmpty, projected + needed > outTransferBudget { break }
-            projected += needed
-            batch.append(next)
-            if txUrgent.isEmpty {
-                txLanes[lane].removeFirst()
-            } else {
-                txUrgent.removeFirst()
+        func takeAll(from source: BoundedQueue<[UInt8]>) -> Bool {
+            while batch.count < outMaxPacketsPerTransfer {
+                guard let frameLength = source.first?.count else { return true }
+                let padding = batch.isEmpty ? 0 : (alignment - projected % alignment) % alignment
+                let needed = padding + RNDISFraming.PACKET_HEADER_SIZE + frameLength
+                if !batch.isEmpty, projected + needed > outTransferBudget { return false }
+                projected += needed
+                batch.append(source.removeFirst())
             }
+            return false
+        }
+        if takeAll(from: txUrgent) {
+            _ = takeAll(from: txLanes[lane])
         }
         return batch
     }

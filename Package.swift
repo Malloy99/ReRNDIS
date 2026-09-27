@@ -10,20 +10,12 @@ let package = Package(
     defaultLocalization: "en",
     platforms: [.macOS("15.0")],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.1.0"),
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
-        .package(url: "https://github.com/apple/swift-binary-parsing.git", from: "0.0.2"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.6.0"),
     ],
     targets: [
         // Pure protocol logic. No IOKit or networking imports so everything is unit-testable.
-        .target(
-            name: "RNDISCore",
-            dependencies: [
-                .product(name: "BinaryParsing", package: "swift-binary-parsing"),
-            ],
-            swiftSettings: releaseOptimizations
-        ),
+        .target(name: "RNDISCore", swiftSettings: releaseOptimizations),
         // C shim exposing if_fake/BPF/NDRV ioctls that Swift cannot import directly.
         .target(name: "CFeth", cSettings: [.unsafeFlags(["-O3"], .when(configuration: .release))]),
         // XPC contract shared by the daemon, CLI, and menu bar app.
@@ -34,7 +26,6 @@ let package = Package(
                 "RNDISCore",
                 "CFeth",
                 "ReRNDISShared",
-                .product(name: "DequeModule", package: "swift-collections"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Logging", package: "swift-log"),
             ],

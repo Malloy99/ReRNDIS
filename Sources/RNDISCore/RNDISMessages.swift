@@ -4,7 +4,6 @@
 // Buffer offsets inside QUERY/SET messages are relative to the RequestID field,
 // which sits 8 bytes into the message.
 
-import BinaryParsing
 import Foundation
 
 public enum RNDIS {
@@ -61,6 +60,33 @@ struct LEWriter {
 
     mutating func bytes(_ payload: [UInt8]) {
         data.append(contentsOf: payload)
+    }
+}
+
+struct LEReader {
+    private let buffer: UnsafeRawBufferPointer
+    private var offset = 0
+
+    init(_ buffer: UnsafeRawBufferPointer) {
+        self.buffer = buffer
+    }
+
+    mutating func u32() throws(RNDISParseError) -> UInt32 {
+        guard buffer.count - offset >= 4 else { throw .tooShort }
+        let value = buffer.loadUnaligned(fromByteOffset: offset, as: UInt32.self)
+        offset += 4
+        return UInt32(littleEndian: value)
+    }
+
+    mutating func skip(_ byteCount: Int) throws(RNDISParseError) {
+        guard byteCount >= 0, buffer.count - offset >= byteCount else { throw .tooShort }
+        offset += byteCount
+    }
+
+    mutating func bytes(_ byteCount: Int) throws(RNDISParseError) -> [UInt8] {
+        let start = offset
+        try skip(byteCount)
+        return Array(UnsafeRawBufferPointer(rebasing: buffer[start..<offset]))
     }
 }
 
@@ -165,63 +191,40 @@ public enum RNDISControlMessage: Equatable, Sendable {
     case unknown(type: UInt32)
 
     public static func parse(_ bytes: [UInt8]) throws -> RNDISControlMessage {
-        try bytes.withParserSpan { (span) throws(RNDISParseError) -> RNDISControlMessage in
-            try parseMessage(&span, available: bytes.count)
+        try bytes.withUnsafeBytes { raw in
+            try parseMessage(raw)
         }
     }
 
-    private static func u32(_ span: inout ParserSpan) throws(RNDISParseError) -> UInt32 {
-        do {
-            return try UInt32(parsingLittleEndian: &span)
-        } catch {
-            throw .tooShort
-        }
-    }
-
-    private static func skip(_ span: inout ParserSpan, _ byteCount: Int) throws(RNDISParseError) {
-        do {
-            try span.seek(toRelativeOffset: byteCount)
-        } catch {
-            throw .tooShort
-        }
-    }
-
-    private static func parseMessage(
-        _ span: inout ParserSpan,
-        available: Int
-    ) throws(RNDISParseError) -> RNDISControlMessage {
-        let type = try u32(&span)
-        let claimedLength = try u32(&span)
-        guard claimedLength >= 12, Int(claimedLength) <= available else {
-            throw .lengthMismatch(claimed: claimedLength, available: available)
+    private static func parseMessage(_ raw: UnsafeRawBufferPointer) throws(RNDISParseError) -> RNDISControlMessage {
+        var header = LEReader(raw)
+        let type = try header.u32()
+        let claimedLength = try header.u32()
+        guard claimedLength >= 12, Int(claimedLength) <= raw.count else {
+            throw .lengthMismatch(claimed: claimedLength, available: raw.count)
         }
         // Every later read is bounded by the message's own claimed length,
         // never by whatever trailing bytes the transfer happened to carry.
-        var body: ParserSpan
-        do {
-            body = try span.sliceSpan(byteCount: Int(claimedLength) - 8)
-        } catch {
-            throw .tooShort
-        }
+        var body = LEReader(UnsafeRawBufferPointer(rebasing: raw[8..<Int(claimedLength)]))
 
         switch type {
         case RNDIS.MSG_INITIALIZE | RNDIS.MSG_COMPLETION_FLAG:
-            let requestID = try u32(&body)
-            let status = try u32(&body)
-            try skip(&body, 16)  // major, minor, device flags, medium
+            let requestID = try body.u32()
+            let status = try body.u32()
+            try body.skip(16)  // major, minor, device flags, medium
             return .initializeComplete(
                 requestID: requestID,
                 status: status,
-                maxPacketsPerTransfer: try u32(&body),
-                maxTransferSize: try u32(&body),
-                packetAlignmentFactor: try u32(&body)
+                maxPacketsPerTransfer: try body.u32(),
+                maxTransferSize: try body.u32(),
+                packetAlignmentFactor: try body.u32()
             )
 
         case RNDIS.MSG_QUERY | RNDIS.MSG_COMPLETION_FLAG:
-            let requestID = try u32(&body)
-            let status = try u32(&body)
-            let infoLength = try u32(&body)
-            let infoOffset = try u32(&body)
+            let requestID = try body.u32()
+            let status = try body.u32()
+            let infoLength = try body.u32()
+            let infoOffset = try body.u32()
             guard infoLength > 0 else {
                 return .queryComplete(requestID: requestID, status: status, info: [])
             }
@@ -230,30 +233,24 @@ public enum RNDISControlMessage: Equatable, Sendable {
             guard start >= 24, start + Int(infoLength) <= Int(claimedLength) else {
                 throw .malformedOffsets
             }
-            try skip(&body, start - 24)
-            let info: [UInt8]
-            do {
-                info = try Array(parsing: &body, byteCount: Int(infoLength))
-            } catch {
-                throw .tooShort
-            }
-            return .queryComplete(requestID: requestID, status: status, info: info)
+            try body.skip(start - 24)
+            return .queryComplete(requestID: requestID, status: status, info: try body.bytes(Int(infoLength)))
 
         case RNDIS.MSG_SET | RNDIS.MSG_COMPLETION_FLAG:
-            return .setComplete(requestID: try u32(&body), status: try u32(&body))
+            return .setComplete(requestID: try body.u32(), status: try body.u32())
 
         case RNDIS.MSG_RESET | RNDIS.MSG_COMPLETION_FLAG:
             // RESET_C carries no RequestID: fields are status, addressing reset.
-            return .resetComplete(status: try u32(&body), addressingReset: try u32(&body))
+            return .resetComplete(status: try body.u32(), addressingReset: try body.u32())
 
         case RNDIS.MSG_KEEPALIVE:
-            return .keepalive(requestID: try u32(&body))
+            return .keepalive(requestID: try body.u32())
 
         case RNDIS.MSG_KEEPALIVE | RNDIS.MSG_COMPLETION_FLAG:
-            return .keepaliveComplete(requestID: try u32(&body), status: try u32(&body))
+            return .keepaliveComplete(requestID: try body.u32(), status: try body.u32())
 
         case RNDIS.MSG_INDICATE_STATUS:
-            return .indicateStatus(status: try u32(&body))
+            return .indicateStatus(status: try body.u32())
 
         default:
             return .unknown(type: type)
